@@ -1,17 +1,25 @@
-# PNG to Vector SVG Converter
+# Image to Vector SVG Converter
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](<Your Streamlit Cloud URL - Optional>) <!-- Optional: Add link if deployed -->
 
-A web-based tool to convert raster PNG images into vector SVG files using color segmentation and contour tracing. Ideal for reducing manual tracing work in vector editing software.
+A web-based tool to convert raster images (PNG, JPG, GIF) into vector SVG files using either **Color Segmentation** or **Edge Detection**. Ideal for reducing manual tracing work in vector editing software.
 
 ## Features
 
 *   **Simple Web UI:** Built with Streamlit for ease of use.
-*   **PNG Upload:** Upload your source images directly.
-*   **Color Segmentation:** Identifies dominant color regions using K-Means.
-*   **Contour Tracing:** Creates vector paths from color boundaries using OpenCV.
-*   **Output Modes:** Generate SVGs with `fill` (solid shapes) or `stroke` (outlines).
-*   **Adjustable Parameters:** Control number of colors, minimum shape area, stroke width, and optional pre-blurring.
+*   **Multi-Format Upload:** Supports PNG, JPG/JPEG, and GIF (first frame) uploads.
+*   **Dual Vectorization Methods:**
+    *   **Color Segmentation:** Identifies dominant color regions using K-Means (MiniBatch variant).
+    *   **Edge Detection:** Creates outlines based on detected edges using the Canny algorithm.
+*   **Contour Tracing:** Creates vector paths from boundaries using OpenCV.
+*   **Output Modes (Color Segmentation):** Generate SVGs with `fill` (solid shapes) or `stroke` (color outlines).
+*   **Configurable Parameters:** Fine-tune the conversion with controls for:
+    *   Number of colors (segmentation)
+    *   Canny thresholds (edge detection)
+    *   Minimum shape/edge area
+    *   Stroke width and color
+    *   Optional pre-blurring
+    *   Optional image downscaling
 *   **Live Preview:** See the generated SVG directly in the app.
 *   **Direct Downloads:** Save results as `.svg` or `.zip` files.
 
@@ -32,8 +40,8 @@ Use Python's `venv` for environment isolation and `uv` for fast package installa
 
 1.  **Clone Repository:**
     ```bash
-    git clone <your-repository-url>
-    cd <repository-directory-name>
+    git clone <your-repository-url> # Replace with your actual repo URL
+    cd <repository-directory-name> # Navigate into the cloned project folder
     ```
 
 2.  **Create & Activate Virtual Environment:**
@@ -59,7 +67,7 @@ Use Python's `venv` for environment isolation and `uv` for fast package installa
     # Run inside the activated environment
     uv pip install -r requirements.txt
     ```
-    *(If `requirements.txt` is missing, run `uv pip install streamlit numpy opencv-python scikit-learn Pillow svgwrite` then `uv pip freeze > requirements.txt`)*
+    *(If `requirements.txt` is missing: first run `uv pip install streamlit numpy opencv-python scikit-learn Pillow svgwrite`, then generate the file with `uv pip freeze > requirements.txt`)*
 
 ## Usage
 
@@ -70,55 +78,49 @@ Use Python's `venv` for environment isolation and `uv` for fast package installa
     ```
 3.  **Open in Browser:** Access the local URL provided (e.g., `http://localhost:8501`).
 4.  **Convert Images:**
-    *   Upload a PNG file.
-    *   Adjust settings in the sidebar.
-    *   Click "Convert to SVG".
-    *   Preview the result.
-    *   Download the `.svg` or `.zip` file using the sidebar buttons.
+    *   Upload an image file (PNG, JPG, GIF) using the file uploader.
+    *   In the sidebar, select the desired `Vectorization Method` ('Color Segmentation' or 'Edge Detection').
+    *   Adjust the general settings (`Gaussian Blur Radius`, `Downscale Large Images`).
+    *   Configure the method-specific settings that appear below (e.g., `Number of Colors` and `Output Mode` for Color Segmentation, or `Canny Thresholds` and `Edge Stroke Color` for Edge Detection).
+    *   Click the "Convert to SVG" button.
+    *   Wait for processing and view the preview.
+    *   Download the resulting `.svg` or `.zip` file using the sidebar buttons.
 5.  **Stop the App:** Press `Ctrl+C` in the terminal.
 6.  **(Optional) Deactivate Environment:** `deactivate`
-
-## Parameters Explained
-
-*   **Number of Colors:** Controls color detail vs. complexity. More colors = more detail & paths.
-*   **Output Mode:**
-    *   `fill`: Creates solid, filled vector shapes.
-    *   `stroke`: Creates outlined vector shapes.
-*   **Stroke Width:** Thickness of lines in `stroke` mode (pixels).
-*   **Minimum Area:** Ignores detected color regions smaller than this (pixels) to reduce noise.
-*   **Gaussian Blur Radius:** Pre-blurs the image (0 = off). Helps smooth jagged edges or noise before vectorization.
 
 ## Usage Guide & Tips
 
 *   **Choosing the Right Method:**
-    *   Use **Color Segmentation** for images with distinct, flat color areas (logos, cartoons, simple illustrations, icons). It works best when colors are clearly separated.
-    *   Use **Edge Detection** for line art, sketches, technical drawings, or when you primarily need the outlines of shapes, regardless of their fill color.
+    *   Use **Color Segmentation** for images with distinct, flat color areas (logos, cartoons, simple illustrations, icons). It preserves color information and creates filled or stroked regions.
+    *   Use **Edge Detection** for line art, sketches, technical drawings, or when you primarily need the outlines of shapes, regardless of their fill color. This method ignores color and focuses purely on lines.
 *   **Input Image Quality:**
-    *   **Prefer PNG:** Lossless PNGs generally work best, especially for segmentation. JPG compression artifacts can sometimes create unwanted noise or fuzzy boundaries.
-    *   **Clear Boundaries:** Images with well-defined edges and less noise/gradients will convert more cleanly.
-    *   **GIFs:** Only the first frame of an animated GIF is processed.
-*   **Preprocessing with Blur:**
-    *   A small **Gaussian Blur Radius** (e.g., 0.5-1.5) applied *before* vectorization can significantly smooth jagged pixel edges or reduce minor noise, leading to cleaner vector paths.
+    *   **Prefer Lossless:** PNGs generally work best, especially for Color Segmentation, as JPG compression artifacts can create unwanted noise or fuzzy boundaries.
+    *   **Clear Boundaries:** Images with well-defined edges and less noise/gradients will convert more cleanly using either method.
+    *   **GIFs:** Only the first frame of an animated GIF is processed. Ensure it's converted to RGBA internally.
+*   **Preprocessing with Blur (`Gaussian Blur Radius`):**
+    *   Applies blur *before* vectorization. A small radius (e.g., 0.5-1.5) can significantly smooth jagged pixel edges or reduce minor noise, leading to cleaner vector paths in both methods.
     *   Experiment carefully: too much blur will merge details and reduce accuracy. Start with 0 and increase slightly if needed.
-*   **Performance with Downscaling:**
-    *   Keep **Downscale Large Images** enabled for faster processing, especially with high-resolution inputs. The default `Max Dimension` (e.g., 1024px) is often sufficient.
-    *   Disable downscaling only if you absolutely need to preserve every detail from a very large image and are prepared for longer processing times.
+*   **Performance (`Downscale Large Images`, `Max Dimension`):**
+    *   Keep **Downscale Large Images** enabled for faster processing, especially with high-resolution inputs. Reducing the `Max Dimension` (largest side in pixels) speeds things up considerably.
+    *   Disable downscaling only if you absolutely need maximum detail from a very large image and accept longer processing times.
 *   **Color Segmentation Tuning:**
-    *   **Number of Colors:** Start with a moderate number (e.g., 8-16). Increase it if important color details are missed. Decrease it if the result is too complex or noisy. Finding the right balance is key.
-    *   **Mode:** `fill` is standard for recreating colored shapes. `stroke` can be used for artistic outlining based on color regions.
-    *   **Min Region Area:** Increase this value to eliminate small, isolated "speckle" artifacts, particularly common in noisy images or complex gradients.
+    *   **`Number of Colors`:** Start moderately (e.g., 8-16). Increase to capture more color details; decrease if the result is too noisy or overly complex. Finding the right balance is key.
+    *   **`Output Mode`:** `fill` creates standard solid color shapes. `stroke` creates colored outlines based on the detected color regions.
+    *   **`Min Region Area`:** Increase this pixel value to eliminate small, isolated "speckle" artifacts from noise or complex gradients.
+    *   **`Stroke Width` (Stroke Mode):** Sets line thickness when `Output Mode` is `stroke`.
 *   **Edge Detection Tuning:**
-    *   **Canny Thresholds:** These significantly impact edge detection. Lower `Threshold 1` and `Threshold 2` values detect more (potentially weaker) edges. Higher values detect only stronger edges. A common starting point is T2 ≈ 2*T1 or 3*T1. Experiment to find the best balance for your image.
-    *   **Min Edge Length Area:** Increase this to discard very short, potentially irrelevant edge segments.
-    *   **Stroke Width/Color:** Adjust for desired line thickness and visibility.
+    *   **`Canny Threshold 1 / Threshold 2`:** These significantly impact edge detection sensitivity. Lower values detect more (potentially weaker) edges; higher values detect only stronger edges. (Tip: T2 ≈ 2*T1 or 3*T1 is often a good starting range). Experiment!
+    *   **`Min Edge Length Area`:** Increase this value (approx. pixel area of the contour) to discard very short, potentially irrelevant edge segments.
+    *   **`Stroke Width` / `Edge Stroke Color`:** Adjust for desired line thickness and color in the final SVG outline.
 *   **Iterate and Refine:**
-    *   Vectorization is often an iterative process. Don't expect perfection on the first attempt.
-    *   Adjust one parameter at a time (e.g., blur, number of colors/thresholds, min area) and reconvert to see the effect.
+    *   Vectorization often requires experimentation. Adjust one parameter at a time (e.g., blur, number of colors/thresholds, min area) and reconvert to observe the effect.
 *   **Post-Processing in Vector Software:**
-    *   The generated SVG is a starting point. Use vector editing software (like Inkscape, Adobe Illustrator, Figma, Affinity Designer) to:
+    *   The generated SVG is often a great starting point. Use vector editing software (Inkscape, Illustrator, Figma, Affinity Designer) to:
         *   Simplify or smooth paths further.
-        *   Combine overlapping shapes.
-        *   Correct colors or add gradients.
-        *   Remove unwanted small elements.
+        *   Combine or merge overlapping shapes.
+        *   Correct or change colors/strokes.
+        *   Remove unwanted small elements manually.
+
+## License
 
 MIT License (See LICENSE file for details)
